@@ -3,6 +3,7 @@
 
 # Ignore log files
 *.log
+*.env
 
 # Ignore database files
 *.db
@@ -19,3 +20,4 @@ Thumbs.db
 # Ignore temporary files
 *.swp
 *.swo
+.vercel
