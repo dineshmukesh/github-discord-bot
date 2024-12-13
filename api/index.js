@@ -96,14 +96,17 @@ app.post("/github-webhook", async (req, res) => {
     const ref = payload.ref; // branch name
     const pusher = payload.pusher.name;
 
-    embed = new EmbedBuilder().setColor("#0099ff");
-
     if (ref === "refs/heads/development") {
       if (commits && commits.length > 0) {
         const commitMessage = commits[0].message;
         const commitUrl = commits[0].url;
 
-        message = `${pusher} pushed to the branch **${ref}**:\n\n**${commitMessage}**\n[View Commit](${commitUrl})\nRequesting everyone to do a git pull to get the latest changes.`;
+        embed = new EmbedBuilder()
+          .setColor("#0099ff")
+          .setTitle("View Commit")
+          .setURL(commitUrl);
+
+        message = `${pusher} pushed to the branch **${ref}**:\n\n**${commitMessage}**\nRequesting everyone to do a git pull to get the latest changes.`;
 
         // Send message to Discord
       } else {
