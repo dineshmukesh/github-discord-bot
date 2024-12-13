@@ -76,7 +76,7 @@ app.post("/github-webhook", async (req, res) => {
           message = `${prUser} requested a review from ${payload.requested_reviewer.login} for the pull request: **${prTitle}**\n`;
           break;
         case "review_request_removed":
-          message = `${prUser} removed a review request from the pull request: **${prTitle}**\n`;
+          message = `${prUser} removed a review request from ${payload.requested_reviewer.login} for the pull request: **${prTitle}**\n`;
           break;
         default:
           res.status(400).send("Event not supported");
