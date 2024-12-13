@@ -54,7 +54,7 @@ app.post("/github-webhook", async (req, res) => {
     if (pr && action) {
       prTitle = pr.title;
       const prUrl = pr.html_url;
-      const prUser = pr.user.login;
+      const prUser = payload.sender.login;
       message = "";
 
       // Handle different pull request actions
@@ -73,14 +73,14 @@ app.post("/github-webhook", async (req, res) => {
           message = `${prUser} reopened the pull request: **${prTitle}**\n`;
           break;
         case "review_requested":
-          message = `${prUser} requested a review for the pull request: **${prTitle}**\n`;
+          message = `${prUser} requested a review from ${payload.requested_reviewer.login} for the pull request: **${prTitle}**\n`;
           break;
         case "review_request_removed":
           message = `${prUser} removed a review request from the pull request: **${prTitle}**\n`;
           break;
         default:
-          message = `${prUser} ${action} the pull request: **${prTitle}**\n`;
-          break;
+          res.status(400).send("Event not supported");
+          return;
       }
 
       // Create a Discord message with EmbedBuilder (updated for discord.js v14)
@@ -121,7 +121,7 @@ app.post("/github-webhook", async (req, res) => {
     if (pr && action) {
       prTitle = pr.title;
       const prUrl = pr.html_url;
-      const prUser = pr.user.login;
+      const prUser = payload.sender.login;
       message = "";
 
       // Handle different pull request actions
@@ -129,6 +129,9 @@ app.post("/github-webhook", async (req, res) => {
         case "submitted":
           message = `${prUser} submitted a review for the pull request: **${prTitle}**\n`;
           break;
+        default:
+          res.status(400).send("Event not supported");
+          return;
       }
       embed = new EmbedBuilder()
         .setColor("#0099ff")
