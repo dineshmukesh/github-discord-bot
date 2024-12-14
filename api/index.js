@@ -6,6 +6,7 @@ const {
   GatewayIntentBits,
   EmbedBuilder,
   TextChannel,
+  ThreadChannel,
 } = require("discord.js");
 
 // Initialize the Express app
@@ -90,6 +91,7 @@ app.post("/github-webhook", async (req, res) => {
         .setURL(prUrl);
     } else {
       res.status(400).send("Invalid PR payload");
+      return;
     }
   } else if (event === "push") {
     const commits = payload.commits;
@@ -106,15 +108,22 @@ app.post("/github-webhook", async (req, res) => {
           .setTitle("View Commit")
           .setURL(commitUrl);
 
-        message = `${pusher} pushed to the branch **${ref}**:\n\n**${commitMessage}**\nRequesting everyone to do a git pull to get the latest changes.`;
+        message = `${pusher} pushed to the branch **${ref.replace(
+          "refs/heads/",
+          ""
+        )}**:\n\n**${
+          commits[0].message
+        }**\n\nRequesting everyone to do a git pull to get the latest changes.`;
 
         // Send message to Discord
       } else {
         res.status(400).send("Invalid Push payload");
+        return;
       }
     } else {
       // Ignore pushes to any branch other than 'development'
       res.status(200).send("Push to non-development branch, no action taken");
+      return;
     }
   } else if (event === "pull_request_review") {
     const pr = payload.pull_request;
@@ -144,48 +153,35 @@ app.post("/github-webhook", async (req, res) => {
       // Send the initial message in the newly created thread
     } else {
       res.status(400).send("Invalid PR payload");
+      return;
     }
   } else {
     res.status(400).send("Event not supported");
+    return;
   }
 
-  // Ensure the bot is part of the server and fetch the channel
-  const channel = client.channels.cache.get(
-    repository === "fems-web"
-      ? process.env.WEB_CHANNEL_ID
-      : process.env.MOBILE_APP_CHANNEL_ID
-  );
-  if (channel instanceof TextChannel) {
-    if (event === "pull_request" || event === "pull_request_review") {
-      try {
-        // Check if thread already exists
-        const threads = await channel.threads.fetchActive(); // Fetch active threads
-        let existingThread = threads.threads.find((thread) =>
-          thread.name.includes(prTitle)
-        );
+  let channel_id = "";
 
-        if (existingThread) {
-          // Send the message to the existing thread\
-          await existingThread.send({ content: message, embeds: [embed] });
-          res.status(200).send("PR Thread created or updated and message sent");
-          if (action === "closed") {
-            await existingThread.delete();
-          }
-          return;
-        }
-      } catch (err) {
-        console.error("Error handling thread:", err);
-        res.status(500).send("Failed to create thread or send message");
-      }
-    }
+  if (repository === "fems-web") {
+    channel_id = process.env.WEB_CHANNEL_ID;
+  } else if (repository === "vantage-mobile-app") {
+    channel_id = process.env.MOBILE_APP_CHANNEL_ID;
+  } else if (repository === "vantage-backend") {
+    channel_id = process.env.BACKEND_CHANNEL_ID;
+  }
+  // Ensure the bot is part of the server and fetch the channel
+  const channel = client.channels.cache.get(channel_id);
+  if (channel instanceof ThreadChannel) {
     // Send the embed message to the Discord channel
     try {
       await channel.send({ content: message, embeds: [embed] });
       res.status(200).send("Notification sent to Discord");
       console.log("res sent");
+      return;
     } catch (err) {
       console.error("Error sending message to Discord:", err);
       res.status(500).send("Failed to send notification");
+      return;
     }
   } else {
     res
